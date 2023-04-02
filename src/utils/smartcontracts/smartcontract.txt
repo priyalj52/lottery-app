@@ -1,0 +1,67 @@
+import smartpy as sp
+class Lottery (sp.Contract):
+    def _init_(self):
+        self.init(
+            players=sp.map(l={},tkey=sp.TNat,tvalue=sp.TAddress),
+            ticket_cost=sp.tez(1),
+            tickets_available=sp.nat(5),
+            max_tickets=sp.nat(5),
+            operator=sp.test_account("admin").address,
+        )
+    @sp.entry_point
+    def buy_ticket(self):
+        sp.verify(self.data.tickets_available > 0,"No Tickets available")
+        sp.verify(sp.amount >=self.data.ticket_cost,"Invalid amount")
+        self.data.players[sp.len(self.data.players)]=sp.sender
+        self.data.tickets_available=sp.as_nat(self.data.tickets_available - 1)
+        extra_balance=sp.amount - sp.amount - self.data.ticket_cost
+        sp.if extra_balance > sp.mutez(0):
+          sp.send(sp.sender,extra_balance)
+
+    @sp.entry_point
+    def end_game(self,random_number):
+        sp.set_type(random_number,sp.TNat)
+
+        sp.verify(sp.sender==self.data.operator,"NOT AUTHORISED")
+        sp.verify(self.data.tickets_available == 0,"GAME IS YET TO END")
+
+        winner_id = random_number % self.data.max_tickets
+        winner_address = self.data.players[winner_id]
+
+        sp.send(winner_address, sp.balance)
+
+
+        self.data.players = {}
+        self.data.tickets_available = self.data.max_tickets
+
+    @sp.entry_point 
+    def default(self):
+        sp.failwith("NOT ALLOWED")
+@sp.add_test(name = "main")
+def test():
+    scenario = sp.test_scenario()
+    admin=sp.test_account("admin")
+    priyal=sp.test_account("priyal")
+    rohan=sp.test_account("rohan")
+    leena=sp.test_account("leena")
+    tarun=sp.test_account("tarun")
+    john=sp.test_account("john")
+
+    lottery=Lottery()
+    scenario+=lottery
+
+    scenario.h2("buy_ticket (valid test)")
+    scenario += lottery.buy_ticket().run(amount = sp.tez(1), sender = priyal)
+    scenario += lottery.buy_ticket().run(amount = sp.tez(2), sender = rohan)
+    scenario += lottery.buy_ticket().run(amount = sp.tez(3), sender = john)
+    scenario += lottery.buy_ticket().run(amount = sp.tez(1), sender = leena)
+    scenario += lottery.buy_ticket().run(amount = sp.tez(1), sender = tarun)
+
+    scenario.h2("buy_ticket (failure test)")
+    scenario += lottery.buy_ticket().run(amount = sp.tez(1), sender = rohan, valid = False)
+
+    # end_game
+    scenario.h2("end_game (valid test)")
+    scenario += lottery.end_game(21).run(sender = admin)
+              
+                 

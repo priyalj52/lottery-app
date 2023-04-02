@@ -1,0 +1,37 @@
+import smartpy as sp
+
+class Value_changer(sp.Contract):
+    def __init__(self):
+        self.init(
+            name="name",
+            place="location",
+            age=22,
+        ) #name and place of string type
+    #entry points are decorators-tells if its a smart contact method,used for interactions
+    @sp.entry_point
+    def name_changer(self,new_name):
+        self.data.name=new_name
+# params={name:"abc",}
+#     def name_changer2(self,parmas):
+#         self.data.name=params.new_name
+    @sp.entry_point
+    def place_changer(self,new_place):
+        self.data.place=new_place
+    @sp.entry_point
+    def age_changer(self,new_age):
+        self.data.age=new_age
+    
+@sp.add_test(name="value changer")
+def test():
+    scenario=sp.test_scenario()
+    scenario.h1=("value changer/Name changer")
+    vc_object=Value_changer() #obj created
+    scenario+=vc_object
+#test accounts
+    admin=sp.test_account("admin")
+    rohan=sp.test_account("rohan")
+
+    vc_object.name_changer("abc").run(sender=rohan)
+    vc_object.name_changer(input("enter your name")).run(sender=rohan)
+    vc_object.place_changer(input("enter your place")).run(sender=admin)
+    vc_object.age_changer(int(input("enter your age"))).run(sender=rohan)
